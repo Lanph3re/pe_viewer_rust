@@ -3,7 +3,7 @@ mod pe_viewer;
 use std::io;
 use clap::{Arg, App, AppSettings};
 
-fn main() -> io::Result<()> {
+fn main() {
     let app = App::new("PEViewer-Rust")
         .setting(AppSettings::ArgRequiredElseHelp)
         .about("Command line tool to analyze PE binary")
@@ -16,5 +16,5 @@ fn main() -> io::Result<()> {
             .help("PE file to analyze"))
         .get_matches();
 
-    pe_viewer::pe_viewer(app.value_of("file").unwrap())
+    pe_viewer::pe_viewer(app.value_of("file").unwrap());
 }
