@@ -13,6 +13,7 @@ mod pe {
     pub struct PeFile<'a> {
         pub map: &'a [u8],
         pub image_dos_header: ImageDosHeader,
+        pub image_nt_header: ImageNtHeader,
     }
 
     // IMAGE_DOS_HEADER
@@ -55,12 +56,21 @@ mod pe {
         size: u32,
     }
 
+    impl Default for ImageDataDirectory {
+        fn default() -> Self {
+            Self {
+                virtual_address: 0,
+                size: 0,
+            }
+        }
+    }
+
     // IMAGE_OPTIONAL_HEADER
     // Binary has one of two structs in this enum
     // based on file(32bit or 64bit)
     const IMAGE_NUMBEROF_DIRECTORY_ENTRIES: usize = 16;
 
-    enum OptionalHeader {
+    enum ImageOptionalHeader {
         ImageOptionalHeader32 {
             magic: u16,
             major_linker_version: u8,
@@ -103,7 +113,6 @@ mod pe {
             size_of_uninitialized_data: u32,
             address_of_entry_point: u32,
             base_of_code: u32,
-
             image_base: u64,
             section_alignment: u32,
             file_alignment: u32,
@@ -132,16 +141,20 @@ mod pe {
     pub struct ImageNtHeader {
         signature: u32, // PE Signature: 0x50450000 ("PE")
         image_file_header: ImageFileHeader,
-        image_optional_header: OptionalHeader,
+        image_optional_header: ImageOptionalHeader,
     }
 
     impl<'a> PeFile<'a> {
         pub fn new(file: &'a [u8]) -> PeFile {
             let temp_dos = load_image_dos_header(file);
 
+            let nt_offset = temp_dos.e_lfanew as usize;
+            let temp_nt = load_image_nt_header(&file[nt_offset..]);
+
             let pe_file = PeFile {
                 map: file,
-                image_dos_header: temp_dos
+                image_dos_header: temp_dos,
+                image_nt_header: temp_nt,
             };
 
             pe_file
@@ -164,29 +177,55 @@ mod pe {
         }
 
         pub fn print_image_dos_header(&self) {
-            let header = &self.image_dos_header;
+            let h = &self.image_dos_header;
 
             println!("\nIMAGE_DOS_HEADER");
-            println!("====================================");
-            println!("Signature                    : {:04X}", header.e_magic);
-            println!("Bytes one Last Page of File  : {:04X}", header.e_cblp);
-            println!("Pages in File                : {:04X}", header.e_cp);
-            println!("Relocations                  : {:04X}", header.e_crlc);
-            println!("Size of Header in Paragraphs : {:04X}", header.e_cparhdr);
-            println!("Minimum Extra Paragraphs     : {:04X}", header.e_minalloc);
-            println!("Maximum Extra Paragraphs     : {:04X}", header.e_maxalloc);
-            println!("Initial(relative) SS         : {:04X}", header.e_ss);
-            println!("Initial SP                   : {:04X}", header.e_sp);
-            println!("Checksum                     : {:04X}", header.e_csum);
-            println!("Initial IP                   : {:04X}", header.e_ip);
-            println!("Initial(relative) CS         : {:04X}", header.e_cs);
-            println!("Offset to Relocation Table   : {:04X}", header.e_lfarlc);
-            println!("Reserved                     : {:04X}", header.e_res[0]);
-            println!("Overlay Number               : {:04X}", header.e_ovno);
-            println!("OEM Identifier               : {:04X}", header.e_oemid);
-            println!("OEM Information              : {:04X}", header.e_oeminfo);
-            println!("Reserved                     : {:04X}", header.e_res2[0]);
-            println!("Offset to New EXE Header     : {:04X}\n", header.e_lfanew);
+            println!("==========================================");
+            println!("Signature                    : {:#04X}{}", h.e_magic,
+                if h.e_magic == 0x5A4D {
+                    " 'MZ'"
+                } else {
+                    ""
+                });
+            println!("Bytes one Last Page of File  : {:#04X}", h.e_cblp);
+            println!("Pages in File                : {:#04X}", h.e_cp);
+            println!("Relocations                  : {:#04X}", h.e_crlc);
+            println!("Size of Header in Paragraphs : {:#04X}", h.e_cparhdr);
+            println!("Minimum Extra Paragraphs     : {:#04X}", h.e_minalloc);
+            println!("Maximum Extra Paragraphs     : {:#04X}", h.e_maxalloc);
+            println!("Initial(relative) SS         : {:#04X}", h.e_ss);
+            println!("Initial SP                   : {:#04X}", h.e_sp);
+            println!("Checksum                     : {:#04X}", h.e_csum);
+            println!("Initial IP                   : {:#04X}", h.e_ip);
+            println!("Initial(relative) CS         : {:#04X}", h.e_cs);
+            println!("Offset to Relocation Table   : {:#04X}", h.e_lfarlc);
+            println!("Reserved                     : {:#04X}", h.e_res[0]);
+            println!("Overlay Number               : {:#04X}", h.e_ovno);
+            println!("OEM Identifier               : {:#04X}", h.e_oemid);
+            println!("OEM Information              : {:#04X}", h.e_oeminfo);
+            println!("Reserved                     : {:#04X}", h.e_res2[0]);
+            println!("Offset to New EXE Header     : {:#04X}\n", h.e_lfanew);
+        }
+
+        pub fn print_image_nt_header(&self) {
+            let h = &self.image_nt_header;
+
+            println!("\nIMAGE_NT_HEADER");
+            println!("============================================");
+            println!("Signature                    : {:#08X}{}", h.signature,
+                if h.signature == 0x4550 {
+                    " 'PE'"
+                } else {
+                    ""
+                });
+            println!("IMAGE_FILE_HEADER");
+            println!("    Machine                  : {:#04X}", h.image_file_header.machine);
+            println!("    Number of Sections       : {:#04X}", h.image_file_header.number_of_sections);
+            println!("    Time Date Stamp          : {:#08X}", h.image_file_header.time_data_stamp);
+            println!("    Pointer to Symbol Table  : {:#08X}", h.image_file_header.pointer_to_symbol_table);
+            println!("    Number of Symbols        : {:#08X}", h.image_file_header.number_of_symbols);
+            println!("    Size of Optional Header  : {:#04X}", h.image_file_header.size_of_optional_header);
+            println!("    Characteristics          : {:#04X}\n", h.image_file_header.characteristics);
         }
     }
 
@@ -229,11 +268,121 @@ mod pe {
         image_dos_header
     }
 
-    /* pub fn load_image_nt_header(file: &[u8]) -> ImageNtHeader {
-        let image_nt_header = ImageNtHeader {};
+    pub fn load_image_nt_header(file: &[u8]) -> ImageNtHeader {
+        let mut cursor = Cursor::new(file);
+
+        let temp_signature = cursor.read_u32::<LittleEndian>().unwrap();
+
+        let temp_file = ImageFileHeader {
+                machine: cursor.read_u16::<LittleEndian>().unwrap(),
+                number_of_sections: cursor.read_u16::<LittleEndian>().unwrap(),
+                time_data_stamp: cursor.read_u32::<LittleEndian>().unwrap(),
+                pointer_to_symbol_table: cursor.read_u32::<LittleEndian>().unwrap(),
+                number_of_symbols: cursor.read_u32::<LittleEndian>().unwrap(),
+                size_of_optional_header: cursor.read_u16::<LittleEndian>().unwrap(),
+                characteristics: cursor.read_u16::<LittleEndian>().unwrap(),
+        };
+
+        let temp_optional = match temp_file.size_of_optional_header {
+            0xE0 => ImageOptionalHeader::ImageOptionalHeader32 {
+                magic: cursor.read_u16::<LittleEndian>().unwrap(),
+                major_linker_version: cursor.read_u8().unwrap(),
+                minor_linker_version: cursor.read_u8().unwrap(),
+                size_of_code: cursor.read_u32::<LittleEndian>().unwrap(),
+                size_of_initialized_data: cursor.read_u32::<LittleEndian>().unwrap(),
+                size_of_uninitialized_data: cursor.read_u32::<LittleEndian>().unwrap(),
+                address_of_entry_point: cursor.read_u32::<LittleEndian>().unwrap(),
+                base_of_code: cursor.read_u32::<LittleEndian>().unwrap(),
+                base_of_data: cursor.read_u32::<LittleEndian>().unwrap(),
+                image_base: cursor.read_u32::<LittleEndian>().unwrap(),
+                section_alignment: cursor.read_u32::<LittleEndian>().unwrap(),
+                file_alignment: cursor.read_u32::<LittleEndian>().unwrap(),
+                major_operating_system_version: cursor.read_u16::<LittleEndian>().unwrap(),
+                minor_operating_system_version: cursor.read_u16::<LittleEndian>().unwrap(),
+                major_image_version: cursor.read_u16::<LittleEndian>().unwrap(),
+                minor_image_version: cursor.read_u16::<LittleEndian>().unwrap(),
+                major_subsystem_version: cursor.read_u16::<LittleEndian>().unwrap(),
+                minor_subsystem_version: cursor.read_u16::<LittleEndian>().unwrap(),
+                win32_version_value: cursor.read_u32::<LittleEndian>().unwrap(),
+                size_of_image: cursor.read_u32::<LittleEndian>().unwrap(),
+                size_of_headers: cursor.read_u32::<LittleEndian>().unwrap(),
+                checksum: cursor.read_u32::<LittleEndian>().unwrap(),
+                subsystem: cursor.read_u16::<LittleEndian>().unwrap(),
+                dll_characteristics: cursor.read_u16::<LittleEndian>().unwrap(),
+                size_of_stack_reserve: cursor.read_u32::<LittleEndian>().unwrap(),
+                size_of_stack_commit: cursor.read_u32::<LittleEndian>().unwrap(),
+                size_of_heap: cursor.read_u32::<LittleEndian>().unwrap(),
+                size_of_heap_commit: cursor.read_u32::<LittleEndian>().unwrap(),
+                loader_flags: cursor.read_u32::<LittleEndian>().unwrap(),
+                number_of_rva_and_sizes: cursor.read_u32::<LittleEndian>().unwrap(),
+                data_directory: {
+                    let mut temp_data_directory:
+                        [ImageDataDirectory; IMAGE_NUMBEROF_DIRECTORY_ENTRIES] = Default::default();             
+
+                    for i in 0..IMAGE_NUMBEROF_DIRECTORY_ENTRIES {
+                        temp_data_directory[i].virtual_address = cursor.read_u32::<LittleEndian>().unwrap();
+                        temp_data_directory[i].size = cursor.read_u32::<LittleEndian>().unwrap();
+                    }
+
+                    temp_data_directory
+                },
+            },
+            0xF0 => ImageOptionalHeader::ImageOptionalHeader64 {
+                magic: cursor.read_u16::<LittleEndian>().unwrap(),
+                major_linker_version: cursor.read_u8().unwrap(),
+                minor_linker_version: cursor.read_u8().unwrap(),
+                size_of_code: cursor.read_u32::<LittleEndian>().unwrap(),
+                size_of_initialized_data: cursor.read_u32::<LittleEndian>().unwrap(),
+                size_of_uninitialized_data: cursor.read_u32::<LittleEndian>().unwrap(),
+                address_of_entry_point: cursor.read_u32::<LittleEndian>().unwrap(),
+                base_of_code: cursor.read_u32::<LittleEndian>().unwrap(),
+                image_base: cursor.read_u64::<LittleEndian>().unwrap(),
+                section_alignment: cursor.read_u32::<LittleEndian>().unwrap(),
+                file_alignment: cursor.read_u32::<LittleEndian>().unwrap(),
+                major_operating_system_version: cursor.read_u16::<LittleEndian>().unwrap(),
+                minor_operating_system_version: cursor.read_u16::<LittleEndian>().unwrap(),
+                major_image_version: cursor.read_u16::<LittleEndian>().unwrap(),
+                minor_image_version: cursor.read_u16::<LittleEndian>().unwrap(),
+                major_subsystem_version: cursor.read_u16::<LittleEndian>().unwrap(),
+                minor_subsystem_version: cursor.read_u16::<LittleEndian>().unwrap(),
+                win32_version_value: cursor.read_u32::<LittleEndian>().unwrap(),
+                size_of_image: cursor.read_u32::<LittleEndian>().unwrap(),
+                size_of_headers: cursor.read_u32::<LittleEndian>().unwrap(),
+                checksum: cursor.read_u32::<LittleEndian>().unwrap(),
+                subsystem: cursor.read_u16::<LittleEndian>().unwrap(),
+                dll_characteristics: cursor.read_u16::<LittleEndian>().unwrap(),
+                size_of_stack_reserve: cursor.read_u64::<LittleEndian>().unwrap(),
+                size_of_stack_commit: cursor.read_u64::<LittleEndian>().unwrap(),
+                size_of_heap: cursor.read_u64::<LittleEndian>().unwrap(),
+                size_of_heap_commit: cursor.read_u64::<LittleEndian>().unwrap(),
+                loader_flags: cursor.read_u32::<LittleEndian>().unwrap(),
+                number_of_rva_and_sizes: cursor.read_u32::<LittleEndian>().unwrap(),
+                data_directory: {
+                    let mut temp_data_directory:
+                        [ImageDataDirectory; IMAGE_NUMBEROF_DIRECTORY_ENTRIES] = Default::default();
+
+                    for i in 0..IMAGE_NUMBEROF_DIRECTORY_ENTRIES {
+                        temp_data_directory[i].virtual_address = cursor.read_u32::<LittleEndian>().unwrap();
+                        temp_data_directory[i].size = cursor.read_u32::<LittleEndian>().unwrap();
+                    }
+
+                    temp_data_directory
+                },
+            },
+            _ => {
+                print!("Invalid value: size of optional header");
+                std::process::exit(-1);
+            },
+        };
+
+        let image_nt_header = ImageNtHeader {
+            signature: temp_signature,
+            image_file_header: temp_file,
+            image_optional_header: temp_optional,
+        };
 
         image_nt_header
-    } */
+    }
 }
 
 pub fn read_num() -> i32 {
@@ -262,7 +411,8 @@ pub fn pe_viewer(path: &str) {
     loop {
         print!("1. Hex dump\n");
         print!("2. IMAGE_DOS_HEADER\n");
-        print!("3. Exit\n");
+        print!("3. IMAGE_NT_HEADER\n");
+        print!("4. Exit\n");
         print!("> ");
         io::stdout().flush().expect("Stdout::flush failed");
 
@@ -271,7 +421,8 @@ pub fn pe_viewer(path: &str) {
         match cmd {
             1 => pe_file.print_hex_dump(),
             2 => pe_file.print_image_dos_header(),
-            3 => break,
+            3 => pe_file.print_image_nt_header(),
+            4 => break,
             _ => println!("Invalid input\n"),
         };
     };
