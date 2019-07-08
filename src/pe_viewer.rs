@@ -1,10 +1,7 @@
 use memmap::MmapOptions;
-use std:: {
-    io:: {
-        self,
-        prelude::*
-    },
+use std::{
     fs::File,
+    io::{self, prelude::*},
 };
 
 // Module that contains PE Structs and functions
@@ -18,7 +15,7 @@ mod pe {
 
     // IMAGE_DOS_HEADER
     pub struct ImageDosHeader {
-        e_magic: u16,   // Should be MZ
+        e_magic: u16, // Should be MZ
         e_cblp: u16,
         e_cp: u16,
         e_crlc: u16,
@@ -36,9 +33,65 @@ mod pe {
         e_oemid: u16,
         e_oeminfo: u16,
         e_res2: [u16; 10],
-        e_lfanew: u32,  // Offset to IMAGE_NT_HEADER
+        e_lfanew: u32, // Offset to IMAGE_NT_HEADER
     }
-    
+
+    // Characteristics in IMAGE_FILE_HEADER
+    const CHARACTERISTICS: [(&str, u16); 16] = [
+        ("IMAGE_FILE_RELOCS_STRIPPED", 0x0001),
+        ("IMAGE_FILE_EXECUTABLE_IMAGE", 0x0002),
+        ("IMAGE_FILE_LINE_NUMS_STRIPPED", 0x0004),
+        ("IMAGE_FILE_LOCAL_SYMS_STRIPPED", 0x0008),
+        ("IMAGE_FILE_AGGRESIVE_WS_TRIM", 0x0010),
+        ("IMAGE_FILE_LARGE_ADDRESS_AWARE", 0x0020),
+        ("IMAGE_FILE_16BIT_MACHINE", 0x0040),
+        ("IMAGE_FILE_BYTES_REVERSED_LO", 0x0080),
+        ("IMAGE_FILE_32BIT_MACHINE", 0x0100),
+        ("IMAGE_FILE_DEBUG_STRIPPED", 0x0200),
+        ("IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP", 0x0400),
+        ("IMAGE_FILE_NET_RUN_FROM_SWAP", 0x08000),
+        ("IMAGE_FILE_SYSTEM", 0x1000),
+        ("IMAGE_FILE_DLL", 0x2000),
+        ("IMAGE_FILE_UP_SYSTEM_ONLY", 0x4000),
+        ("IMAGE_FILE_BYTES_REVERSED_HI", 0x8000),
+    ];
+
+    // Machine filed in IMAGE_FILE_HEADER
+    const MACHINE: [(&str, u16); 32] = [
+        ("UNKNOWN", 0x0),
+        ("I860", 0x014d),
+        ("I386", 0x014c),
+        ("R3000", 0x0162),
+        ("R4000", 0x0166),
+        ("R10000", 0x0168),
+        ("WCEMIPSV2", 0x0169),
+        ("ALPHA", 0x0184),
+        ("SH3", 0x01a2),
+        ("SH3DSP", 0x01a3),
+        ("SH3E", 0x01a4),
+        ("SH4", 0x01a6),
+        ("SH5", 0x01a8),
+        ("ARM", 0x01c0),
+        ("THUMB", 0x01c2),
+        ("ARMNT", 0x01c4),
+        ("ARM64", 0xaa64),
+        ("AM33", 0x01d3),
+        ("POWERPC", 0x01f0),
+        ("POWERPCFP", 0x01f1),
+        ("IA64", 0x0200),
+        ("MIPS16", 0x0266),
+        ("ALPHA64", 0x0284),
+        ("MIPSFPU", 0x0366),
+        ("MIPSFPU16", 0x0466),
+        ("AXP64", 0x0284),
+        ("TRICORE", 0x0520),
+        ("CEF", 0x0cef),
+        ("EBC", 0x0ebc),
+        ("AMD64", 0x8664),
+        ("M32R", 0x9041),
+        ("CEE", 0xc0e),
+    ];
+
     // IMAGE_FILE_HEADER
     struct ImageFileHeader {
         machine: u16,
@@ -160,14 +213,14 @@ mod pe {
             pe_file
         }
 
-        pub fn print_hex_dump(&self) {            
+        pub fn print_hex_dump(&self) {
             let mut cut = 0;
 
             for byte in self.map.iter() {
                 if cut % 16 == 0 {
                     print!("\n{:08X} |", cut);
                 }
-                
+
                 print!(" {:02X}", byte);
 
                 cut = cut + 1;
@@ -181,12 +234,11 @@ mod pe {
 
             println!("\nIMAGE_DOS_HEADER");
             println!("==========================================");
-            println!("Signature                    : {:#04X}{}", h.e_magic,
-                if h.e_magic == 0x5A4D {
-                    " 'MZ'"
-                } else {
-                    ""
-                });
+            println!(
+                "Signature                    : {:#04X}{}",
+                h.e_magic,
+                if h.e_magic == 0x5A4D { " 'MZ'" } else { "" }
+            );
             println!("Bytes one Last Page of File  : {:#04X}", h.e_cblp);
             println!("Pages in File                : {:#04X}", h.e_cp);
             println!("Relocations                  : {:#04X}", h.e_crlc);
@@ -212,26 +264,140 @@ mod pe {
 
             println!("\nIMAGE_NT_HEADER");
             println!("============================================");
-            println!("Signature                    : {:#08X}{}", h.signature,
-                if h.signature == 0x4550 {
-                    " 'PE'"
-                } else {
-                    ""
-                });
+            println!(
+                "Signature                    : {:#08X}{}",
+                h.signature,
+                if h.signature == 0x4550 { " 'PE'" } else { "" }
+            );
             println!("IMAGE_FILE_HEADER");
-            println!("    Machine                  : {:#04X}", h.image_file_header.machine);
-            println!("    Number of Sections       : {:#04X}", h.image_file_header.number_of_sections);
-            println!("    Time Date Stamp          : {:#08X}", h.image_file_header.time_data_stamp);
-            println!("    Pointer to Symbol Table  : {:#08X}", h.image_file_header.pointer_to_symbol_table);
-            println!("    Number of Symbols        : {:#08X}", h.image_file_header.number_of_symbols);
-            println!("    Size of Optional Header  : {:#04X}", h.image_file_header.size_of_optional_header);
-            println!("    Characteristics          : {:#04X}\n", h.image_file_header.characteristics);
+
+            // Find machine name
+            let name: &str = {
+                let mut tmp: &str = "";
+
+                for machine in MACHINE.iter() {
+                    if h.image_file_header.machine == machine.1 {
+                        tmp = machine.0;
+                    }
+                }
+                tmp
+            };
+
+            println!(
+                "    Machine                  : {:#04X} '{}'",
+                h.image_file_header.machine, name
+            );
+            println!(
+                "    Number of Sections       : {:#04X}",
+                h.image_file_header.number_of_sections
+            );
+            println!(
+                "    Time Date Stamp          : {:#08X}",
+                h.image_file_header.time_data_stamp
+            );
+            println!(
+                "    Pointer to Symbol Table  : {:#08X}",
+                h.image_file_header.pointer_to_symbol_table
+            );
+            println!(
+                "    Number of Symbols        : {:#08X}",
+                h.image_file_header.number_of_symbols
+            );
+            println!(
+                "    Size of Optional Header  : {:#04X}",
+                h.image_file_header.size_of_optional_header
+            );
+
+            // Find chracteristics of binary
+            let mut characteristics = String::new();
+            for characteristic in CHARACTERISTICS.iter() {
+                if (h.image_file_header.characteristics & characteristic.1) != 0 {
+                    characteristics += "\n        ";
+                    characteristics += characteristic.0;
+                }
+            }
+            print!(
+                "    Characteristics          : {:#04X}",
+                h.image_file_header.characteristics
+            );
+            println!("        {}", characteristics);
+            match &h.image_optional_header {
+                ImageOptionalHeader::ImageOptionalHeader32 {
+                    magic,
+                    major_linker_version,
+                    minor_linker_version,
+                    size_of_code,
+                    size_of_initialized_data,
+                    size_of_uninitialized_data,
+                    address_of_entry_point,
+                    base_of_code,
+                    base_of_data,
+                    image_base,
+                    section_alignment,
+                    file_alignment,
+                    major_operating_system_version,
+                    minor_operating_system_version,
+                    major_image_version,
+                    minor_image_version,
+                    major_subsystem_version,
+                    minor_subsystem_version,
+                    win32_version_value,
+                    size_of_image,
+                    size_of_headers,
+                    checksum,
+                    subsystem,
+                    dll_characteristics,
+                    size_of_stack_reserve,
+                    size_of_stack_commit,
+                    size_of_heap,
+                    size_of_heap_commit,
+                    loader_flags,
+                    number_of_rva_and_sizes,
+                    data_directory,
+                } => {
+                    println!("IMAGE_OPTIONAL_HEADER32");
+                }
+                ImageOptionalHeader::ImageOptionalHeader64 {
+                    magic,
+                    major_linker_version,
+                    minor_linker_version,
+                    size_of_code,
+                    size_of_initialized_data,
+                    size_of_uninitialized_data,
+                    address_of_entry_point,
+                    base_of_code,
+                    image_base,
+                    section_alignment,
+                    file_alignment,
+                    major_operating_system_version,
+                    minor_operating_system_version,
+                    major_image_version,
+                    minor_image_version,
+                    major_subsystem_version,
+                    minor_subsystem_version,
+                    win32_version_value,
+                    size_of_image,
+                    size_of_headers,
+                    checksum,
+                    subsystem,
+                    dll_characteristics,
+                    size_of_stack_reserve,
+                    size_of_stack_commit,
+                    size_of_heap,
+                    size_of_heap_commit,
+                    loader_flags,
+                    number_of_rva_and_sizes,
+                    data_directory,
+                } => {
+                    println!("IMAGE_OPTIONAL_HEADER64");
+                }
+            }
         }
     }
 
-    use std::io::Cursor;
-    use byteorder::{LittleEndian, ReadBytesExt};
 
+    use byteorder::{LittleEndian, ReadBytesExt};
+    use std::io::Cursor;
     pub fn load_image_dos_header(file: &[u8]) -> ImageDosHeader {
         let mut cursor = Cursor::new(file);
 
@@ -274,13 +440,13 @@ mod pe {
         let temp_signature = cursor.read_u32::<LittleEndian>().unwrap();
 
         let temp_file = ImageFileHeader {
-                machine: cursor.read_u16::<LittleEndian>().unwrap(),
-                number_of_sections: cursor.read_u16::<LittleEndian>().unwrap(),
-                time_data_stamp: cursor.read_u32::<LittleEndian>().unwrap(),
-                pointer_to_symbol_table: cursor.read_u32::<LittleEndian>().unwrap(),
-                number_of_symbols: cursor.read_u32::<LittleEndian>().unwrap(),
-                size_of_optional_header: cursor.read_u16::<LittleEndian>().unwrap(),
-                characteristics: cursor.read_u16::<LittleEndian>().unwrap(),
+            machine: cursor.read_u16::<LittleEndian>().unwrap(),
+            number_of_sections: cursor.read_u16::<LittleEndian>().unwrap(),
+            time_data_stamp: cursor.read_u32::<LittleEndian>().unwrap(),
+            pointer_to_symbol_table: cursor.read_u32::<LittleEndian>().unwrap(),
+            number_of_symbols: cursor.read_u32::<LittleEndian>().unwrap(),
+            size_of_optional_header: cursor.read_u16::<LittleEndian>().unwrap(),
+            characteristics: cursor.read_u16::<LittleEndian>().unwrap(),
         };
 
         let temp_optional = match temp_file.size_of_optional_header {
@@ -316,11 +482,12 @@ mod pe {
                 loader_flags: cursor.read_u32::<LittleEndian>().unwrap(),
                 number_of_rva_and_sizes: cursor.read_u32::<LittleEndian>().unwrap(),
                 data_directory: {
-                    let mut temp_data_directory:
-                        [ImageDataDirectory; IMAGE_NUMBEROF_DIRECTORY_ENTRIES] = Default::default();             
+                    let mut temp_data_directory: [ImageDataDirectory;
+                        IMAGE_NUMBEROF_DIRECTORY_ENTRIES] = Default::default();
 
                     for i in 0..IMAGE_NUMBEROF_DIRECTORY_ENTRIES {
-                        temp_data_directory[i].virtual_address = cursor.read_u32::<LittleEndian>().unwrap();
+                        temp_data_directory[i].virtual_address =
+                            cursor.read_u32::<LittleEndian>().unwrap();
                         temp_data_directory[i].size = cursor.read_u32::<LittleEndian>().unwrap();
                     }
 
@@ -358,11 +525,12 @@ mod pe {
                 loader_flags: cursor.read_u32::<LittleEndian>().unwrap(),
                 number_of_rva_and_sizes: cursor.read_u32::<LittleEndian>().unwrap(),
                 data_directory: {
-                    let mut temp_data_directory:
-                        [ImageDataDirectory; IMAGE_NUMBEROF_DIRECTORY_ENTRIES] = Default::default();
+                    let mut temp_data_directory: [ImageDataDirectory;
+                        IMAGE_NUMBEROF_DIRECTORY_ENTRIES] = Default::default();
 
                     for i in 0..IMAGE_NUMBEROF_DIRECTORY_ENTRIES {
-                        temp_data_directory[i].virtual_address = cursor.read_u32::<LittleEndian>().unwrap();
+                        temp_data_directory[i].virtual_address =
+                            cursor.read_u32::<LittleEndian>().unwrap();
                         temp_data_directory[i].size = cursor.read_u32::<LittleEndian>().unwrap();
                     }
 
@@ -372,7 +540,7 @@ mod pe {
             _ => {
                 print!("Invalid value: size of optional header");
                 std::process::exit(-1);
-            },
+            }
         };
 
         let image_nt_header = ImageNtHeader {
@@ -390,7 +558,7 @@ pub fn read_num() -> i32 {
     let mut buf = String::new();
 
     stdin.read_line(&mut buf).expect("Stdin::read_line failed");
-    
+
     match buf.trim().parse() {
         Ok(num) => num,
         Err(_) => -1,
@@ -403,7 +571,7 @@ pub fn pe_viewer(path: &str) {
         Err(_) => {
             print!("[Error] Can't open the binary or binary not found");
             std::process::exit(-1);
-        },
+        }
     };
     let file_data = unsafe { MmapOptions::new().map(&file).expect("memmap failed") };
     let pe_file = pe::PeFile::new(&file_data);
@@ -425,5 +593,5 @@ pub fn pe_viewer(path: &str) {
             4 => break,
             _ => println!("Invalid input\n"),
         };
-    };
+    }
 }
