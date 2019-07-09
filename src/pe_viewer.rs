@@ -151,7 +151,7 @@ mod pe {
             dll_characteristics: u16,
             size_of_stack_reserve: u32,
             size_of_stack_commit: u32,
-            size_of_heap: u32,
+            size_of_heap_reserve: u32,
             size_of_heap_commit: u32,
             loader_flags: u32,
             number_of_rva_and_sizes: u32,
@@ -183,7 +183,7 @@ mod pe {
             dll_characteristics: u16,
             size_of_stack_reserve: u64,
             size_of_stack_commit: u64,
-            size_of_heap: u64,
+            size_of_heap_reserve: u64,
             size_of_heap_commit: u64,
             loader_flags: u32,
             number_of_rva_and_sizes: u32,
@@ -233,43 +233,44 @@ mod pe {
             let h = &self.image_dos_header;
 
             println!("\nIMAGE_DOS_HEADER");
-            println!("==========================================");
+            println!("=========================================");
             println!(
-                "Signature                    : {:#04X}{}",
+                "Signature                   : {:#X}{}",
                 h.e_magic,
                 if h.e_magic == 0x5A4D { " 'MZ'" } else { "" }
             );
-            println!("Bytes one Last Page of File  : {:#04X}", h.e_cblp);
-            println!("Pages in File                : {:#04X}", h.e_cp);
-            println!("Relocations                  : {:#04X}", h.e_crlc);
-            println!("Size of Header in Paragraphs : {:#04X}", h.e_cparhdr);
-            println!("Minimum Extra Paragraphs     : {:#04X}", h.e_minalloc);
-            println!("Maximum Extra Paragraphs     : {:#04X}", h.e_maxalloc);
-            println!("Initial(relative) SS         : {:#04X}", h.e_ss);
-            println!("Initial SP                   : {:#04X}", h.e_sp);
-            println!("Checksum                     : {:#04X}", h.e_csum);
-            println!("Initial IP                   : {:#04X}", h.e_ip);
-            println!("Initial(relative) CS         : {:#04X}", h.e_cs);
-            println!("Offset to Relocation Table   : {:#04X}", h.e_lfarlc);
-            println!("Reserved                     : {:#04X}", h.e_res[0]);
-            println!("Overlay Number               : {:#04X}", h.e_ovno);
-            println!("OEM Identifier               : {:#04X}", h.e_oemid);
-            println!("OEM Information              : {:#04X}", h.e_oeminfo);
-            println!("Reserved                     : {:#04X}", h.e_res2[0]);
-            println!("Offset to New EXE Header     : {:#04X}\n", h.e_lfanew);
+            println!("Bytes one Last Page of File : {:#X}", h.e_cblp);
+            println!("Pages in File               : {:#X}", h.e_cp);
+            println!("Relocations                 : {:#X}", h.e_crlc);
+            println!("Size of Header in Paragraphs: {:#X}", h.e_cparhdr);
+            println!("Minimum Extra Paragraphs    : {:#X}", h.e_minalloc);
+            println!("Maximum Extra Paragraphs    : {:#X}", h.e_maxalloc);
+            println!("Initial(relative) SS        : {:#X}", h.e_ss);
+            println!("Initial SP                  : {:#X}", h.e_sp);
+            println!("Checksum                    : {:#X}", h.e_csum);
+            println!("Initial IP                  : {:#X}", h.e_ip);
+            println!("Initial(relative) CS        : {:#X}", h.e_cs);
+            println!("Offset to Relocation Table  : {:#X}", h.e_lfarlc);
+            println!("Reserved                    : {:#X}", h.e_res[0]);
+            println!("Overlay Number              : {:#X}", h.e_ovno);
+            println!("OEM Identifier              : {:#X}", h.e_oemid);
+            println!("OEM Information             : {:#X}", h.e_oeminfo);
+            println!("Reserved                    : {:#X}", h.e_res2[0]);
+            println!("Offset to New EXE Header    : {:#X}\n", h.e_lfanew);
         }
 
         pub fn print_image_nt_header(&self) {
             let h = &self.image_nt_header;
 
             println!("\nIMAGE_NT_HEADER");
-            println!("============================================");
+            println!("=================================================");
             println!(
-                "Signature                    : {:#08X}{}",
+                "Signature: {:#X}{}",
                 h.signature,
                 if h.signature == 0x4550 { " 'PE'" } else { "" }
             );
-            println!("IMAGE_FILE_HEADER");
+            println!("\nIMAGE_FILE_HEADER");
+            println!("-------------------------------------------------");
 
             // Find machine name
             let name: &str = {
@@ -284,27 +285,27 @@ mod pe {
             };
 
             println!(
-                "    Machine                  : {:#04X} '{}'",
+                "    Machine                : {:#X} '{}'",
                 h.image_file_header.machine, name
             );
             println!(
-                "    Number of Sections       : {:#04X}",
+                "    Number of Sections     : {:#X}",
                 h.image_file_header.number_of_sections
             );
             println!(
-                "    Time Date Stamp          : {:#08X}",
+                "    Time Date Stamp        : {:#X}",
                 h.image_file_header.time_data_stamp
             );
             println!(
-                "    Pointer to Symbol Table  : {:#08X}",
+                "    Pointer to Symbol Table: {:#X}",
                 h.image_file_header.pointer_to_symbol_table
             );
             println!(
-                "    Number of Symbols        : {:#08X}",
+                "    Number of Symbols      : {:#X}",
                 h.image_file_header.number_of_symbols
             );
             println!(
-                "    Size of Optional Header  : {:#04X}",
+                "    Size of Optional Header: {:#X}",
                 h.image_file_header.size_of_optional_header
             );
 
@@ -317,7 +318,7 @@ mod pe {
                 }
             }
             print!(
-                "    Characteristics          : {:#04X}",
+                "    Characteristics        : {:#X}",
                 h.image_file_header.characteristics
             );
             println!("        {}", characteristics);
@@ -349,13 +350,44 @@ mod pe {
                     dll_characteristics,
                     size_of_stack_reserve,
                     size_of_stack_commit,
-                    size_of_heap,
+                    size_of_heap_reserve,
                     size_of_heap_commit,
                     loader_flags,
                     number_of_rva_and_sizes,
                     data_directory,
                 } => {
-                    println!("IMAGE_OPTIONAL_HEADER32");
+                    println!("\nIMAGE_OPTIONAL_HEADER32");
+                    println!("-------------------------------------------------");
+                    println!("    Magic                      : {:#X}", magic);
+                    println!("    MajorLinkerVersion         : {:#X}", major_linker_version);
+                    println!("    MinorLinkerVersion         : {:#X}", minor_linker_version);
+                    println!("    SizeOfCode                 : {:#X}", size_of_code);
+                    println!("    SizeOfInitializedData      : {:#X}", size_of_initialized_data);
+                    println!("    SizeOfUninitializedData    : {:#X}", size_of_uninitialized_data);
+                    println!("    AddressOfEntryPoint        : {:#X}", address_of_entry_point);
+                    println!("    BaseOfCode                 : {:#X}", base_of_code);
+                    println!("    BaseOfData                 : {:#X}", base_of_data);
+                    println!("    ImageBase                  : {:#X}", image_base);
+                    println!("    SectionAlignment           : {:#X}", section_alignment);
+                    println!("    FileAlignment              : {:#X}", file_alignment);
+                    println!("    MajorOperatingSystemVersion: {:#X}", major_operating_system_version);
+                    println!("    MinorOperatingSystemVersion: {:#X}", minor_operating_system_version);
+                    println!("    MajorImageVersion          : {:#X}", major_image_version);
+                    println!("    MinorImageVersion          : {:#X}", minor_image_version);
+                    println!("    MajorSubsystemVersion      : {:#X}", major_subsystem_version);
+                    println!("    MinorSubsystemVersion      : {:#X}", minor_subsystem_version);
+                    println!("    Win32VersionValue          : {:#X}", win32_version_value);
+                    println!("    SizeOfImage                : {:#X}", size_of_image);
+                    println!("    SizeOfHeaders              : {:#X}", size_of_headers);
+                    println!("    CheckSum                   : {:#X}", checksum);
+                    println!("    Subsystem                  : {:#X}", subsystem);
+                    println!("    DllCharacteristics         : {:#X}", dll_characteristics);
+                    println!("    SizeOfStackReserve         : {:#X}", size_of_stack_reserve);
+                    println!("    SizeOfStackCommit          : {:#X}", size_of_stack_commit);
+                    println!("    SizeOfHeapReserve          : {:#X}", size_of_heap_reserve);
+                    println!("    SizeOfHeapCommit           : {:#X}", size_of_heap_commit);
+                    println!("    LoaderFlags                : {:#X}", loader_flags);
+                    println!("    NumberOfRvaAndSizes        : {:#X}", number_of_rva_and_sizes);
                 }
                 ImageOptionalHeader::ImageOptionalHeader64 {
                     magic,
@@ -383,13 +415,43 @@ mod pe {
                     dll_characteristics,
                     size_of_stack_reserve,
                     size_of_stack_commit,
-                    size_of_heap,
+                    size_of_heap_reserve,
                     size_of_heap_commit,
                     loader_flags,
                     number_of_rva_and_sizes,
                     data_directory,
                 } => {
-                    println!("IMAGE_OPTIONAL_HEADER64");
+                    println!("\nIMAGE_OPTIONAL_HEADER64");
+                    println!("-------------------------------------------------");
+                    println!("    Magic                      : {:#X}", magic);
+                    println!("    MajorLinkerVersion         : {:#X}", major_linker_version);
+                    println!("    MinorLinkerVersion         : {:#X}", minor_linker_version);
+                    println!("    SizeOfCode                 : {:#X}", size_of_code);
+                    println!("    SizeOfInitializedData      : {:#X}", size_of_initialized_data);
+                    println!("    SizeOfUninitializedData    : {:#X}", size_of_uninitialized_data);
+                    println!("    AddressOfEntryPoint        : {:#X}", address_of_entry_point);
+                    println!("    BaseOfCode                 : {:#X}", base_of_code);
+                    println!("    ImageBase                  : {:#X}", image_base);
+                    println!("    SectionAlignment           : {:#X}", section_alignment);
+                    println!("    FileAlignment              : {:#X}", file_alignment);
+                    println!("    MajorOperatingSystemVersion: {:#X}", major_operating_system_version);
+                    println!("    MinorOperatingSystemVersion: {:#X}", minor_operating_system_version);
+                    println!("    MajorImageVersion          : {:#X}", major_image_version);
+                    println!("    MinorImageVersion          : {:#X}", minor_image_version);
+                    println!("    MajorSubsystemVersion      : {:#X}", major_subsystem_version);
+                    println!("    MinorSubsystemVersion      : {:#X}", minor_subsystem_version);
+                    println!("    Win32VersionValue          : {:#X}", win32_version_value);
+                    println!("    SizeOfImage                : {:#X}", size_of_image);
+                    println!("    SizeOfHeaders              : {:#X}", size_of_headers);
+                    println!("    CheckSum                   : {:#X}", checksum);
+                    println!("    Subsystem                  : {:#X}", subsystem);
+                    println!("    DllCharacteristics         : {:#X}", dll_characteristics);
+                    println!("    SizeOfStackReserve         : {:#X}", size_of_stack_reserve);
+                    println!("    SizeOfStackCommit          : {:#X}", size_of_stack_commit);
+                    println!("    SizeOfHeapReserve          : {:#X}", size_of_heap_reserve);
+                    println!("    SizeOfHeapCommit           : {:#X}", size_of_heap_commit);
+                    println!("    LoaderFlags                : {:#X}", loader_flags);
+                    println!("    NumberOfRvaAndSizes        : {:#X}", number_of_rva_and_sizes);
                 }
             }
         }
@@ -477,7 +539,7 @@ mod pe {
                 dll_characteristics: cursor.read_u16::<LittleEndian>().unwrap(),
                 size_of_stack_reserve: cursor.read_u32::<LittleEndian>().unwrap(),
                 size_of_stack_commit: cursor.read_u32::<LittleEndian>().unwrap(),
-                size_of_heap: cursor.read_u32::<LittleEndian>().unwrap(),
+                size_of_heap_reserve: cursor.read_u32::<LittleEndian>().unwrap(),
                 size_of_heap_commit: cursor.read_u32::<LittleEndian>().unwrap(),
                 loader_flags: cursor.read_u32::<LittleEndian>().unwrap(),
                 number_of_rva_and_sizes: cursor.read_u32::<LittleEndian>().unwrap(),
@@ -520,7 +582,7 @@ mod pe {
                 dll_characteristics: cursor.read_u16::<LittleEndian>().unwrap(),
                 size_of_stack_reserve: cursor.read_u64::<LittleEndian>().unwrap(),
                 size_of_stack_commit: cursor.read_u64::<LittleEndian>().unwrap(),
-                size_of_heap: cursor.read_u64::<LittleEndian>().unwrap(),
+                size_of_heap_reserve: cursor.read_u64::<LittleEndian>().unwrap(),
                 size_of_heap_commit: cursor.read_u64::<LittleEndian>().unwrap(),
                 loader_flags: cursor.read_u32::<LittleEndian>().unwrap(),
                 number_of_rva_and_sizes: cursor.read_u32::<LittleEndian>().unwrap(),
