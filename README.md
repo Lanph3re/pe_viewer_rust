@@ -10,6 +10,8 @@ The purpose of this project is to learn Rust lang and PE structure.
 - June 29th
     - Hex dump(Not done)
     - IMAGE_DOS_HEADER
+- July 13th
+    - Print IMAGE_NT_HEADER feature
 
 ## License
 This project is licensed under MIT license.
