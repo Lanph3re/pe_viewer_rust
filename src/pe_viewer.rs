@@ -122,6 +122,24 @@ mod pe {
     // Binary has one of two structs in this enum
     // based on file(32bit or 64bit)
     const IMAGE_NUMBEROF_DIRECTORY_ENTRIES: usize = 16;
+    const IMAGE_DATA_DIRECTORY_ENTRIES: [&str; 16] = [
+        "IMAGE_DIRECTORY_ENTRY_EXPORT",
+        "IMAGE_DIRECTORY_ENTRY_IMPORT",
+        "IMAGE_DIRECTORY_ENTRY_RESOURCE",
+        "IMAGE_DIRECTORY_ENTRY_EXCEPTION",
+        "IMAGE_DIRECTORY_ENTRY_SECURITY",
+        "IMAGE_DIRECTORY_ENTRY_BASERELOC",
+        "IMAGE_DIRECTORY_ENTRY_DEBUG",
+        "IMAGE_DIRECTORY_ENTRY_COPYRIGHT",
+        "IMAGE_DIRECTORY_ENTRY_GLOBALPTR",
+        "IMAGE_DIRECTORY_ENTRY_TLS",
+        "IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG",
+        "IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT",
+        "IMAGE_DIRECTORY_ENTRY_IAT",
+        "IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT",
+        "IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR",
+        "RESREVED",
+    ];
 
     enum ImageOptionalHeader {
         ImageOptionalHeader32 {
@@ -269,6 +287,7 @@ mod pe {
                 h.signature,
                 if h.signature == 0x4550 { " 'PE'" } else { "" }
             );
+
             println!("\nIMAGE_FILE_HEADER");
             println!("-------------------------------------------------");
 
@@ -322,6 +341,8 @@ mod pe {
                 h.image_file_header.characteristics
             );
             println!("        {}", characteristics);
+
+            // Print IMAGE_OPTIONAL_HEADER
             match &h.image_optional_header {
                 ImageOptionalHeader::ImageOptionalHeader32 {
                     magic,
@@ -359,35 +380,96 @@ mod pe {
                     println!("\nIMAGE_OPTIONAL_HEADER32");
                     println!("-------------------------------------------------");
                     println!("    Magic                      : {:#X}", magic);
-                    println!("    MajorLinkerVersion         : {:#X}", major_linker_version);
-                    println!("    MinorLinkerVersion         : {:#X}", minor_linker_version);
+                    println!(
+                        "    MajorLinkerVersion         : {:#X}",
+                        major_linker_version
+                    );
+                    println!(
+                        "    MinorLinkerVersion         : {:#X}",
+                        minor_linker_version
+                    );
                     println!("    SizeOfCode                 : {:#X}", size_of_code);
-                    println!("    SizeOfInitializedData      : {:#X}", size_of_initialized_data);
-                    println!("    SizeOfUninitializedData    : {:#X}", size_of_uninitialized_data);
-                    println!("    AddressOfEntryPoint        : {:#X}", address_of_entry_point);
+                    println!(
+                        "    SizeOfInitializedData      : {:#X}",
+                        size_of_initialized_data
+                    );
+                    println!(
+                        "    SizeOfUninitializedData    : {:#X}",
+                        size_of_uninitialized_data
+                    );
+                    println!(
+                        "    AddressOfEntryPoint        : {:#X}",
+                        address_of_entry_point
+                    );
                     println!("    BaseOfCode                 : {:#X}", base_of_code);
                     println!("    BaseOfData                 : {:#X}", base_of_data);
                     println!("    ImageBase                  : {:#X}", image_base);
                     println!("    SectionAlignment           : {:#X}", section_alignment);
                     println!("    FileAlignment              : {:#X}", file_alignment);
-                    println!("    MajorOperatingSystemVersion: {:#X}", major_operating_system_version);
-                    println!("    MinorOperatingSystemVersion: {:#X}", minor_operating_system_version);
-                    println!("    MajorImageVersion          : {:#X}", major_image_version);
-                    println!("    MinorImageVersion          : {:#X}", minor_image_version);
-                    println!("    MajorSubsystemVersion      : {:#X}", major_subsystem_version);
-                    println!("    MinorSubsystemVersion      : {:#X}", minor_subsystem_version);
-                    println!("    Win32VersionValue          : {:#X}", win32_version_value);
+                    println!(
+                        "    MajorOperatingSystemVersion: {:#X}",
+                        major_operating_system_version
+                    );
+                    println!(
+                        "    MinorOperatingSystemVersion: {:#X}",
+                        minor_operating_system_version
+                    );
+                    println!(
+                        "    MajorImageVersion          : {:#X}",
+                        major_image_version
+                    );
+                    println!(
+                        "    MinorImageVersion          : {:#X}",
+                        minor_image_version
+                    );
+                    println!(
+                        "    MajorSubsystemVersion      : {:#X}",
+                        major_subsystem_version
+                    );
+                    println!(
+                        "    MinorSubsystemVersion      : {:#X}",
+                        minor_subsystem_version
+                    );
+                    println!(
+                        "    Win32VersionValue          : {:#X}",
+                        win32_version_value
+                    );
                     println!("    SizeOfImage                : {:#X}", size_of_image);
                     println!("    SizeOfHeaders              : {:#X}", size_of_headers);
                     println!("    CheckSum                   : {:#X}", checksum);
                     println!("    Subsystem                  : {:#X}", subsystem);
-                    println!("    DllCharacteristics         : {:#X}", dll_characteristics);
-                    println!("    SizeOfStackReserve         : {:#X}", size_of_stack_reserve);
-                    println!("    SizeOfStackCommit          : {:#X}", size_of_stack_commit);
-                    println!("    SizeOfHeapReserve          : {:#X}", size_of_heap_reserve);
-                    println!("    SizeOfHeapCommit           : {:#X}", size_of_heap_commit);
+                    println!(
+                        "    DllCharacteristics         : {:#X}",
+                        dll_characteristics
+                    );
+                    println!(
+                        "    SizeOfStackReserve         : {:#X}",
+                        size_of_stack_reserve
+                    );
+                    println!(
+                        "    SizeOfStackCommit          : {:#X}",
+                        size_of_stack_commit
+                    );
+                    println!(
+                        "    SizeOfHeapReserve          : {:#X}",
+                        size_of_heap_reserve
+                    );
+                    println!(
+                        "    SizeOfHeapCommit           : {:#X}",
+                        size_of_heap_commit
+                    );
                     println!("    LoaderFlags                : {:#X}", loader_flags);
-                    println!("    NumberOfRvaAndSizes        : {:#X}", number_of_rva_and_sizes);
+                    println!(
+                        "    NumberOfRvaAndSizes        : {:#X}",
+                        number_of_rva_and_sizes
+                    );
+                    println!("\nIMAGE_DATA_DIRECTORY");
+                    println!("-------------------------------------------------");
+                    for (i, data_dir) in data_directory.iter().enumerate() {
+                        println!("    {}", IMAGE_DATA_DIRECTORY_ENTRIES[i]);
+                        println!("        Size          : {:#X}", data_dir.size);
+                        println!("        VirtualAddress: {:#X}", data_dir.virtual_address);
+                    }
                 }
                 ImageOptionalHeader::ImageOptionalHeader64 {
                     magic,
@@ -424,36 +506,98 @@ mod pe {
                     println!("\nIMAGE_OPTIONAL_HEADER64");
                     println!("-------------------------------------------------");
                     println!("    Magic                      : {:#X}", magic);
-                    println!("    MajorLinkerVersion         : {:#X}", major_linker_version);
-                    println!("    MinorLinkerVersion         : {:#X}", minor_linker_version);
+                    println!(
+                        "    MajorLinkerVersion         : {:#X}",
+                        major_linker_version
+                    );
+                    println!(
+                        "    MinorLinkerVersion         : {:#X}",
+                        minor_linker_version
+                    );
                     println!("    SizeOfCode                 : {:#X}", size_of_code);
-                    println!("    SizeOfInitializedData      : {:#X}", size_of_initialized_data);
-                    println!("    SizeOfUninitializedData    : {:#X}", size_of_uninitialized_data);
-                    println!("    AddressOfEntryPoint        : {:#X}", address_of_entry_point);
+                    println!(
+                        "    SizeOfInitializedData      : {:#X}",
+                        size_of_initialized_data
+                    );
+                    println!(
+                        "    SizeOfUninitializedData    : {:#X}",
+                        size_of_uninitialized_data
+                    );
+                    println!(
+                        "    AddressOfEntryPoint        : {:#X}",
+                        address_of_entry_point
+                    );
                     println!("    BaseOfCode                 : {:#X}", base_of_code);
                     println!("    ImageBase                  : {:#X}", image_base);
                     println!("    SectionAlignment           : {:#X}", section_alignment);
                     println!("    FileAlignment              : {:#X}", file_alignment);
-                    println!("    MajorOperatingSystemVersion: {:#X}", major_operating_system_version);
-                    println!("    MinorOperatingSystemVersion: {:#X}", minor_operating_system_version);
-                    println!("    MajorImageVersion          : {:#X}", major_image_version);
-                    println!("    MinorImageVersion          : {:#X}", minor_image_version);
-                    println!("    MajorSubsystemVersion      : {:#X}", major_subsystem_version);
-                    println!("    MinorSubsystemVersion      : {:#X}", minor_subsystem_version);
-                    println!("    Win32VersionValue          : {:#X}", win32_version_value);
+                    println!(
+                        "    MajorOperatingSystemVersion: {:#X}",
+                        major_operating_system_version
+                    );
+                    println!(
+                        "    MinorOperatingSystemVersion: {:#X}",
+                        minor_operating_system_version
+                    );
+                    println!(
+                        "    MajorImageVersion          : {:#X}",
+                        major_image_version
+                    );
+                    println!(
+                        "    MinorImageVersion          : {:#X}",
+                        minor_image_version
+                    );
+                    println!(
+                        "    MajorSubsystemVersion      : {:#X}",
+                        major_subsystem_version
+                    );
+                    println!(
+                        "    MinorSubsystemVersion      : {:#X}",
+                        minor_subsystem_version
+                    );
+                    println!(
+                        "    Win32VersionValue          : {:#X}",
+                        win32_version_value
+                    );
                     println!("    SizeOfImage                : {:#X}", size_of_image);
                     println!("    SizeOfHeaders              : {:#X}", size_of_headers);
                     println!("    CheckSum                   : {:#X}", checksum);
                     println!("    Subsystem                  : {:#X}", subsystem);
-                    println!("    DllCharacteristics         : {:#X}", dll_characteristics);
-                    println!("    SizeOfStackReserve         : {:#X}", size_of_stack_reserve);
-                    println!("    SizeOfStackCommit          : {:#X}", size_of_stack_commit);
-                    println!("    SizeOfHeapReserve          : {:#X}", size_of_heap_reserve);
-                    println!("    SizeOfHeapCommit           : {:#X}", size_of_heap_commit);
+                    println!(
+                        "    DllCharacteristics         : {:#X}",
+                        dll_characteristics
+                    );
+                    println!(
+                        "    SizeOfStackReserve         : {:#X}",
+                        size_of_stack_reserve
+                    );
+                    println!(
+                        "    SizeOfStackCommit          : {:#X}",
+                        size_of_stack_commit
+                    );
+                    println!(
+                        "    SizeOfHeapReserve          : {:#X}",
+                        size_of_heap_reserve
+                    );
+                    println!(
+                        "    SizeOfHeapCommit           : {:#X}",
+                        size_of_heap_commit
+                    );
                     println!("    LoaderFlags                : {:#X}", loader_flags);
-                    println!("    NumberOfRvaAndSizes        : {:#X}", number_of_rva_and_sizes);
+                    println!(
+                        "    NumberOfRvaAndSizes        : {:#X}",
+                        number_of_rva_and_sizes
+                    );
+                    println!("\nIMAGE_DATA_DIRECTORY");
+                    println!("-------------------------------------------------");
+                    for (i, data_dir) in data_directory.iter().enumerate() {
+                        println!("    {}", IMAGE_DATA_DIRECTORY_ENTRIES[i]);
+                        println!("        Size          : {:#X}", data_dir.size);
+                        println!("        VirtualAddress: {:#X}\n", data_dir.virtual_address);
+                    }
                 }
-            }
+            } // end of match
+
         }
     }
 
