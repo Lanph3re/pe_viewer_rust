@@ -141,6 +141,36 @@ mod pe {
         "RESREVED",
     ];
 
+    // Subsystem values for IMAGE_OPTIONAL_HEADER
+    const SUB_SYSTEM: [(&str, u16); 14] = [
+        ("IMAGE_SUBSYSTEM_UNKNOWN", 0),
+        ("IMAGE_SUBSYSTEM_NATIVE", 1),
+        ("IMAGE_SUBSYSTEM_WINDOWS_GUI", 2),
+        ("IMAGE_SUBSYSTEM_WINDOWS_CUI", 3),
+        ("IMAGE_SUBSYSTEM_OS2_CUI", 5),
+        ("IMAGE_SUBSYSTEM_POSIX_CUI", 7),
+        ("IMAGE_SUBSYSTEM_NATIVE_WINDOWS", 8),
+        ("IMAGE_SUBSYSTEM_WINDOWS_CE_GUI", 9),
+        ("IMAGE_SUBSYSTEM_EFI_APPLICATION", 10),
+        ("IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER", 11),
+        ("IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER", 12),
+        ("IMAGE_SUBSYSTEM_EFI_ROM", 13),
+        ("IMAGE_SUBSYSTEM_XBOX", 14),
+        ("IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION", 16),
+    ];
+
+    // Dll characteristic values for IMAGE_OPTIONAL_HEADER
+    const DLL_CHARACTERISTICS: [(&str, u16); 8] = [
+        ("IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE", 0x0040),
+        ("IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY", 0x0080),
+        ("IMAGE_DLLCHARACTERISTICS_NX_COMPAT", 0x0100),
+        ("IMAGE_DLLCHARACTERISTICS_NO_ISOLATION", 0x0200),
+        ("IMAGE_DLLCHARACTERISTICS_NO_SEH", 0x0400),
+        ("IMAGE_DLLCHARACTERISTICS_NO_BIND", 0x0800),
+        ("IMAGE_DLLCHARACTERISTICS_WDM_DRIVER", 0x2000),
+        ("IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE", 0x8000),
+    ];
+
     enum ImageOptionalHeader {
         ImageOptionalHeader32 {
             magic: u16,
@@ -437,11 +467,28 @@ mod pe {
                     println!("    SizeOfImage                : {:#X}", size_of_image);
                     println!("    SizeOfHeaders              : {:#X}", size_of_headers);
                     println!("    CheckSum                   : {:#X}", checksum);
-                    println!("    Subsystem                  : {:#X}", subsystem);
-                    println!(
+                    println!("    Subsystem                  : {:#X} '{}'", subsystem, {
+                        let mut system_value: &str = "Undefined";
+                        for system in SUB_SYSTEM.iter() {
+                            if subsystem == &(system.1) {
+                                system_value = system.0;
+                            }
+                        }
+                        system_value
+                    });
+                    print!(
                         "    DllCharacteristics         : {:#X}",
                         dll_characteristics
                     );
+                    // Find dll_chracteristics
+                    let mut characteristics = String::new();
+                    for characteristic in DLL_CHARACTERISTICS.iter() {
+                        if (dll_characteristics & characteristic.1) != 0 {
+                            characteristics += "\n        ";
+                            characteristics += characteristic.0;
+                        }
+                    }
+                    println!("        {}", characteristics);
                     println!(
                         "    SizeOfStackReserve         : {:#X}",
                         size_of_stack_reserve
@@ -562,11 +609,28 @@ mod pe {
                     println!("    SizeOfImage                : {:#X}", size_of_image);
                     println!("    SizeOfHeaders              : {:#X}", size_of_headers);
                     println!("    CheckSum                   : {:#X}", checksum);
-                    println!("    Subsystem                  : {:#X}", subsystem);
-                    println!(
+                    println!("    Subsystem                  : {:#X} '{}'", subsystem, {
+                        let mut system_value: &str = "Undefined";
+                        for system in SUB_SYSTEM.iter() {
+                            if subsystem == &(system.1) {
+                                system_value = system.0;
+                            }
+                        }
+                        system_value
+                    });
+                    print!(
                         "    DllCharacteristics         : {:#X}",
                         dll_characteristics
                     );
+                    // Find dll_chracteristics
+                    let mut characteristics = String::new();
+                    for characteristic in DLL_CHARACTERISTICS.iter() {
+                        if (dll_characteristics & characteristic.1) != 0 {
+                            characteristics += "\n        ";
+                            characteristics += characteristic.0;
+                        }
+                    }
+                    println!("        {}", characteristics);
                     println!(
                         "    SizeOfStackReserve         : {:#X}",
                         size_of_stack_reserve
