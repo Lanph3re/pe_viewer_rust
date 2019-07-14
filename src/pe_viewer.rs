@@ -307,6 +307,7 @@ mod pe {
             println!("Offset to New EXE Header    : {:#X}\n", h.e_lfanew);
         }
 
+
         pub fn print_image_nt_header(&self) {
             let h = &self.image_nt_header;
 
@@ -341,9 +342,14 @@ mod pe {
                 "    Number of Sections     : {:#X}",
                 h.image_file_header.number_of_sections
             );
+
+            use chrono::{TimeZone, Utc};
+
+            let dt = Utc.timestamp(h.image_file_header.time_data_stamp as i64, 0);
             println!(
-                "    Time Date Stamp        : {:#X}",
-                h.image_file_header.time_data_stamp
+                "    Time Date Stamp        : {:#X} '{}'",
+                h.image_file_header.time_data_stamp,
+                dt.to_rfc2822()
             );
             println!(
                 "    Pointer to Symbol Table: {:#X}",
