@@ -11,9 +11,11 @@ mod pe {
         pub map: &'a [u8],
         pub image_dos_header: ImageDosHeader,
         pub image_nt_header: ImageNtHeader,
+        pub image_section_header: &'a [u8],
     }
 
     // IMAGE_DOS_HEADER
+    #[repr(C)]
     pub struct ImageDosHeader {
         e_magic: u16, // Should be MZ
         e_cblp: u16,
@@ -93,6 +95,7 @@ mod pe {
     ];
 
     // IMAGE_FILE_HEADER
+    #[repr(C)]
     struct ImageFileHeader {
         machine: u16,
         number_of_sections: u16,
@@ -104,6 +107,7 @@ mod pe {
     }
 
     // IMAGE_DATA_DIRECTORY
+    #[repr(C)]
     struct ImageDataDirectory {
         virtual_address: u32,
         size: u32,
@@ -239,6 +243,7 @@ mod pe {
         },
     }
 
+    #[repr(C)]
     pub struct ImageNtHeader {
         signature: u32, // PE Signature: 0x50450000 ("PE")
         image_file_header: ImageFileHeader,
@@ -252,10 +257,23 @@ mod pe {
             let nt_offset = temp_dos.e_lfanew as usize;
             let temp_nt = load_image_nt_header(&file[nt_offset..]);
 
+            let size_of_optional_header =
+                temp_nt.image_file_header.size_of_optional_header as usize;
+
             let pe_file = PeFile {
                 map: file,
                 image_dos_header: temp_dos,
                 image_nt_header: temp_nt,
+                image_section_header: {
+                    let mut section_header_offset = 0;
+
+                    section_header_offset += nt_offset;
+                    section_header_offset += 4;
+                    section_header_offset += mem::size_of::<ImageFileHeader>();
+                    section_header_offset += size_of_optional_header;
+
+                    &file[section_header_offset..]
+                },
             };
 
             pe_file
@@ -669,11 +687,26 @@ mod pe {
             } // end of match
 
         }
+
+        pub fn print_image_section_header(&self) {
+            let num_sections = self.image_nt_header.image_file_header.number_of_sections;
+            let section_headers = self.image_section_header;
+
+            for _i in 0..num_sections {
+                for j in 0..8 {
+                    if section_headers[j] != 0 {
+                        print!("{}", section_headers[j] as char);
+                    }
+                }
+                println!("");
+            }
+        }
     }
 
 
     use byteorder::{LittleEndian, ReadBytesExt};
     use std::io::Cursor;
+    use std::mem;
     pub fn load_image_dos_header(file: &[u8]) -> ImageDosHeader {
         let mut cursor = Cursor::new(file);
 
@@ -856,7 +889,8 @@ pub fn pe_viewer(path: &str) {
         print!("1. Hex dump\n");
         print!("2. IMAGE_DOS_HEADER\n");
         print!("3. IMAGE_NT_HEADER\n");
-        print!("4. Exit\n");
+        print!("4. IMAGE_SECTION_HEADER\n");
+        print!("5. Exit\n");
         print!("> ");
         io::stdout().flush().expect("Stdout::flush failed");
 
@@ -866,7 +900,8 @@ pub fn pe_viewer(path: &str) {
             1 => pe_file.print_hex_dump(),
             2 => pe_file.print_image_dos_header(),
             3 => pe_file.print_image_nt_header(),
-            4 => break,
+            4 => pe_file.print_image_section_header(),
+            5 => break,
             _ => println!("Invalid input\n"),
         };
     }
