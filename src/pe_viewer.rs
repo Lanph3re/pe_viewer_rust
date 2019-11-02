@@ -250,6 +250,62 @@ mod pe {
         image_optional_header: ImageOptionalHeader,
     }
 
+    use structview::{u16_le, u32_le, View};
+
+    #[derive(Clone, Copy, View)]
+    #[repr(C)]
+    pub struct ImageSectionHeader {
+        name: [u8; 8],
+        misc: u32_le,
+        virtual_addr: u32_le,
+        size_of_raw_data: u32_le,
+        pointer_to_raw_data: u32_le,
+        pointer_to_relocations: u32_le,
+        pointer_to_line_numbers: u32_le,
+        number_of_relocation: u16_le,
+        number_of_line_numbers: u16_le,
+        characteristics: u32_le,
+    }
+
+    const SECTION_HEADER_SIZE: usize = 40;
+    const SECTION_CHARACTERISTICS: [(&str, u32); 35] = [
+        ("IMAGE_SCN_TYPE_NO_PAD", 0x00000008),
+        ("IMAGE_SCN_CNT_CODE", 0x00000020),
+        ("IMAGE_SCN_CNT_INITIALIZED_DATA", 0x00000040),
+        ("IMAGE_SCN_CNT_UNINITIALIZED_DATA", 0x00000080),
+        ("IMAGE_SCN_LNK_OTHER", 0x00000100),
+        ("IMAGE_SCN_LNK_INFO", 0x00000200),
+        ("IMAGE_SCN_LNK_REMOVE", 0x00000800),
+        ("IMAGE_SCN_LNK_COMDAT", 0x00001000),
+        ("IMAGE_SCN_NO_DEFER_SPEC_EXC", 0x00004000),
+        ("IMAGE_SCN_GPREL", 0x00008000),
+        ("IMAGE_SCN_MEM_PURGEABLE", 0x00020000),
+        ("IMAGE_SCN_MEM_LOCKED", 0x00040000),
+        ("IMAGE_SCN_MEM_PRELOAD", 0x00080000),
+        ("IMAGE_SCN_ALIGN_1BYTES", 0x00100000),
+        ("IMAGE_SCN_ALIGN_2BYTES", 0x00200000),
+        ("IMAGE_SCN_ALIGN_4BYTES", 0x00300000),
+        ("IMAGE_SCN_ALIGN_8BYTES", 0x00400000),
+        ("IMAGE_SCN_ALIGN_16BYTES", 0x00500000),
+        ("IMAGE_SCN_ALIGN_32BYTES", 0x00600000),
+        ("IMAGE_SCN_ALIGN_64BYTES", 0x00700000),
+        ("IMAGE_SCN_ALIGN_128BYTES", 0x00800000),
+        ("IMAGE_SCN_ALIGN_256BYTES", 0x00900000),
+        ("IMAGE_SCN_ALIGN_512BYTES", 0x00A00000),
+        ("IMAGE_SCN_ALIGN_1024BYTES", 0x00B00000),
+        ("IMAGE_SCN_ALIGN_2048BYTES", 0x00C00000),
+        ("IMAGE_SCN_ALIGN_4096BYTES", 0x00D00000),
+        ("IMAGE_SCN_ALIGN_8192BYTES", 0x00E00000),
+        ("IMAGE_SCN_LNK_NRELOC_OVFL", 0x01000000),
+        ("IMAGE_SCN_MEM_DISCARDABLE", 0x02000000),
+        ("IMAGE_SCN_MEM_NOT_CACHED", 0x04000000),
+        ("IMAGE_SCN_MEM_NOT_PAGED", 0x08000000),
+        ("IMAGE_SCN_MEM_SHARED", 0x10000000),
+        ("IMAGE_SCN_MEM_EXECUTE", 0x20000000),
+        ("IMAGE_SCN_MEM_READ", 0x40000000),
+        ("IMAGE_SCN_MEM_WRITE", 0x80000000),
+    ];
+
     impl<'a> PeFile<'a> {
         pub fn new(file: &'a [u8]) -> PeFile {
             let temp_dos = load_image_dos_header(file);
@@ -299,7 +355,7 @@ mod pe {
             let h = &self.image_dos_header;
 
             println!("\nIMAGE_DOS_HEADER");
-            println!("=========================================");
+            println!("=================================================");
             println!(
                 "Signature                   : {:#X}{}",
                 h.e_magic,
@@ -324,7 +380,6 @@ mod pe {
             println!("Reserved                    : {:#X}", h.e_res2[0]);
             println!("Offset to New EXE Header    : {:#X}\n", h.e_lfanew);
         }
-
 
         pub fn print_image_nt_header(&self) {
             let h = &self.image_nt_header;
@@ -685,24 +740,78 @@ mod pe {
                     }
                 }
             } // end of match
-
         }
 
         pub fn print_image_section_header(&self) {
             let num_sections = self.image_nt_header.image_file_header.number_of_sections;
-            let section_headers = self.image_section_header;
+            let mut section_header_offset = 0;
+
+            println!("\nIMAGE_SECTION_HEADERS");
+            println!("=================================================");
 
             for _i in 0..num_sections {
-                for j in 0..8 {
-                    if section_headers[j] != 0 {
-                        print!("{}", section_headers[j] as char);
+                let section_header = match ImageSectionHeader::view(
+                    &self.image_section_header[section_header_offset..],
+                ) {
+                    Ok(section_header) => {
+                        section_header_offset += SECTION_HEADER_SIZE;
+                        section_header
+                    }
+                    Err(_e) => {
+                        print!("[Error]Could not convert to ImageSectionHeader\n");
+                        std::process::exit(-1);
+                    }
+                };
+                for _j in 0..8 {
+                    if section_header.name[_j] != 0 {
+                        print!("{}", section_header.name[_j] as char);
                     }
                 }
-                println!("");
+                println!("\n-------------------------------------------------");
+                println!("PhysicalAddress     : {:#X}", section_header.misc.to_int());
+                println!(
+                    "VirtualAddress      : {:#X}",
+                    section_header.virtual_addr.to_int()
+                );
+                println!(
+                    "SizeOfRawData       : {:#X}",
+                    section_header.size_of_raw_data.to_int()
+                );
+                println!(
+                    "PointerToRawData    : {:#X}",
+                    section_header.pointer_to_raw_data.to_int()
+                );
+                println!(
+                    "PointerToRelocations: {:#X}",
+                    section_header.pointer_to_relocations.to_int()
+                );
+                println!(
+                    "PointerToLinenumbers: {:#X}",
+                    section_header.pointer_to_line_numbers.to_int()
+                );
+                println!(
+                    "NumberOfRelocations : {:#X}",
+                    section_header.number_of_relocation.to_int()
+                );
+                println!(
+                    "NumberOfLinenumbers : {:#X}",
+                    section_header.number_of_line_numbers.to_int()
+                );
+                print!(
+                    "Charateristics      : {:#X}",
+                    section_header.characteristics.to_int()
+                );
+                let mut characteristics = String::new();
+                for characteristic in SECTION_CHARACTERISTICS.iter() {
+                    if (section_header.characteristics.to_int() & characteristic.1) != 0 {
+                        characteristics += "\n    ";
+                        characteristics += characteristic.0;
+                    }
+                }
+                println!("        {}\n", characteristics);
             }
         }
     }
-
 
     use byteorder::{LittleEndian, ReadBytesExt};
     use std::io::Cursor;
